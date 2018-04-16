@@ -43,13 +43,14 @@ end
 
 --WAF log record for json,(use logstash codec => json)
 function log_record(method,url,data,ruletag)
-    local cjson = require("cjson")
+    --local cjson = require("cjson")
     local io = require 'io'
     local LOG_PATH = config_log_dir
     local CLIENT_IP = get_client_ip()
     local USER_AGENT = get_user_agent()
     local SERVER_NAME = ngx.var.server_name
     local LOCAL_TIME = ngx.localtime()
+    --[[
     local log_json_obj = {
                  client_ip = CLIENT_IP,
                  local_time = LOCAL_TIME,
@@ -60,7 +61,13 @@ function log_record(method,url,data,ruletag)
                  req_data = data,
                  rule_tag = ruletag,
               }
-    local LOG_LINE = cjson.encode(log_json_obj)
+    --]]
+    --处理为空的情况
+    url = url and url or ''
+
+    --使用字符串拼接
+    local LOG_LINE = CLIENT_IP.." ["..LOCAL_TIME.."] \""..method.." "..SERVER_NAME..url.."\" \""..data.."\"  \""..USER_AGENT.."\" \""..ruletag.."\"\n"
+    --local LOG_LINE = cjson.encode(log_json_obj)
     local LOG_NAME = LOG_PATH..'/'..ngx.today().."_waf.log"
     local file = io.open(LOG_NAME,"a")
     if file == nil then
