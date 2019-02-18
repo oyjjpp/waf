@@ -1,32 +1,11 @@
 --[[
 --@desc:syslog library
---@author
+--@author oyj<ouyangjun@zhangyue.com>
 --@date 2019-02-16
 --]]
 
 local ffi = require("ffi")
-
---log level
-local LOG_EMERG = 0
-local LOG_ALERT = 1
-local LOG_CRIT = 2
-local LOG_ERR = 3
-local LOG_WARNING = 4
-local LOG_NOTICE = 5
-local LOG_INFO = 6
-local LOG_DEBUG = 7
-
---log type
---kernel messages
-local LOG_KERN = 0
---generic user-level messages
-local LOG_USER = 8
---mail subsystem
-local LOG_MAIL = 16
-
---security/authorization messages (private)
-local LOG_LOCAL6 = 176
-
+local json = require("json")
 
 --syslog function
 ffi.cdef[[
@@ -36,7 +15,7 @@ ffi.cdef[[
 ]]
 
 --log type
-local log_type = {
+local log_facility = {
     ["kern"] = 0,
     ["user"] = 8,
     ["mail"] = 16,
@@ -59,7 +38,7 @@ local log_type = {
 }
 
 --log level
-local log_level = {
+local log_priority = {
     ["emerg"] = 0,
     ["alert"] = 1,
     ["crit"]  = 2,
@@ -85,19 +64,47 @@ local function closelog()
     ffi.C.closelog()
 end
 
-local function writeLog(logMessage)
-    ffi.C.openlog("PHP_BIZ_ERRLOG", 1, log_type["local6"])
-    ffi.C.syslog(log_level["err"], " JSON:"..logMessage)
-    ffi.C.closelog()
+local function get_log_id()
+    math.randomseed(os.time())
+    num = math.random()
+    return string.sub(num,-10)
+end
+--rsyslog write_log function
+local function write_log(header, body, level, log_type)
+    if header["rate"] == nil then
+        header["rate"] = 0
+    end
+
+    if header["interval"] == nil then
+        header["interval"] = 0
+    end
+
+    header["time"] = os.date("%Y-%m-%d %H:%M:%S")
+    header["logId"] = get_log_id() 
+
+    data = {
+        ["header"] = header,
+        ["body"] = body
+    }
+
+    content = json.encode(data)
+    openlog("PHP_BIZ_ERRLOG", 1, log_type)
+    syslog(level, " JSON"..content)
+    closelog()
 end
 
-local logMessage = [[{"header":{"topic":"waf","key":"waf_log","rate":0,"interval":0,"url":"http:\/\/127.0.0.1\/index.php","time":1550224968,"logId":1550224968},"body":{"msg":"this is test message"}}]]
-writeLog(logMessage)
+--get_log_id function
+local function get_log_id_ver()
+    math.randomseed(os.time())
+    num = math.random()
+    return string.sub(num,-10)
+end
 
 return {
     openlog = openlog,
     syslog = syslog,
     closelog = closelog,
-    log_type = log_type,
-    log_level = log_level
+    facility = log_facility,
+    priority = log_priority,
+    write_log = write_log
 }
