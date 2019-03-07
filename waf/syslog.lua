@@ -1,9 +1,8 @@
---[[
---@desc:syslog library
---@author oyj<ouyangjun@zhangyue.com>
---@date 2019-02-16
---]]
-
+-- Created by IntelliJ IDEA.
+-- User: ouyangjun
+-- Date: 2019/2/19
+-- Time: 17:28
+-- To change this template use File | Settings | File Templates.
 local ffi = require("ffi")
 local json = require("json")
 
@@ -66,38 +65,26 @@ end
 
 local function get_log_id()
     math.randomseed(os.time())
-    num = math.random()
+    local num = math.random()
     return string.sub(num,-10)
 end
+
 --rsyslog write_log function
 local function write_log(header, body, level, log_type)
-    if header["rate"] == nil then
-        header["rate"] = 0
-    end
-
-    if header["interval"] == nil then
-        header["interval"] = 0
-    end
-
+    header["rate"] = header["rate"] or 0
+    header["interval"] = header["interval"] or 0
     header["time"] = os.date("%Y-%m-%d %H:%M:%S")
-    header["logId"] = get_log_id() 
+    header["logId"] = header["logId"] or get_log_id()
 
-    data = {
+    local data = {
         ["header"] = header,
         ["body"] = body
     }
 
-    content = json.encode(data)
-    openlog("PHP_BIZ_ERRLOG", 1, log_type)
-    syslog(level, " JSON"..content)
+    local content = json.encode(data)
+    openlog("PHP_BIZ_ERRLOG", 0, log_type)
+    syslog(level, " JSON:"..content)
     closelog()
-end
-
---get_log_id function
-local function get_log_id_ver()
-    math.randomseed(os.time())
-    num = math.random()
-    return string.sub(num,-10)
 end
 
 return {
@@ -108,3 +95,4 @@ return {
     priority = log_priority,
     write_log = write_log
 }
+
