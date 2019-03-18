@@ -5,6 +5,7 @@
 -- To change this template use File | Settings | File Templates.
 local ffi = require("ffi")
 local json = require("json")
+local socket = require("socket")
 
 --syslog function
 ffi.cdef[[
@@ -87,12 +88,34 @@ local function write_log(header, body, level, log_type)
     closelog()
 end
 
+--rsyslog socket_log function
+local function socket_log(facility, priority, header, body)
+    header["rate"] = header["rate"] or 0
+    header["interval"] = header["interval"] or 0
+    header["time"] = os.date("%Y-%m-%d %H:%M:%S")
+    header["logId"] = header["logId"] or get_log_id()
+
+    local data = {
+        ["header"] = header,
+        ["body"] = body
+    }
+
+    local msg = "<" .. (facility + priority) .. ">" .. json.encode(data)
+
+    local udp = socket.udp()
+    local host = "127.0.0.1"
+    local port = "2514"
+    udp:sendto(msg, host, port)
+    udp:close()
+end
+
 return {
     openlog = openlog,
     syslog = syslog,
     closelog = closelog,
     facility = log_facility,
     priority = log_priority,
-    write_log = write_log
+    write_log = write_log,
+    socket_log = socket_log
 }
 
